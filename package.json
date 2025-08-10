@@ -1,0 +1,19 @@
+{
+  "name": "gemini-archive",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "node --import @swc-node/register/esm-register src/archive.ts"
+  },
+  "dependencies": {
+    "@swc-node/register": "^1.10.10",
+    "async": "^3.2.6",
+    "playwright": "^1.54.2",
+    "single-file-cli": "^2.0.75"
+  },
+  "devDependencies": {
+    "@types/async": "^3.2.25",
+    "@types/node": "^24.2.1",
+    "typescript": "^5.9.2"
+  }
+}
