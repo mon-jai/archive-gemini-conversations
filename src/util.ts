@@ -23,7 +23,7 @@ export async function getArchivedConversations(archiveDir: string): Promise<Map<
   const map = new Map<string, string>()
 
   for (const file of files) {
-    const match = file.match(/^(?<id>[^-]+) - .+\.html$/)
+    const match = file.match(/^(?<id>[^-]+) - .*\.html$/)
     if (match) map.set(match.groups?.["id"] as string, file)
   }
 
@@ -50,36 +50,102 @@ export async function archiveConversation(browser: Browser, id: string) {
     await page.waitForSelector("message-content", { timeout: 20000 })
     await page.waitForTimeout(3000)
 
-    // Click all visible elements with text starting with "Show"
-    const showButtons = await page.getByText("Show").all()
-    for (const btn of showButtons) {
-      if (await btn.isVisible()) await btn.click()
-    }
+    // Click all visible elements with text "Show"
+    for (const btn of await page.getByText("Show").all()) await btn.click()
+    // Click all visible elements with text "More" (Deep Research)
+    for (const btn of await page.getByText("More").all()) await btn.click()
 
-    // @ts-expect-error
-    const title = (await page.evaluate(() => document.querySelector("h1 > strong").textContent, "")) ?? ""
+    // In some shared conversations, title does not exists
+    // page.evaluate: TypeError: Cannot read properties of null (reading 'textContent')
+    const title = (await page.evaluate(() => document.querySelector("h1 > strong")?.textContent, "")) ?? ""
+    const includesKatex = await page.evaluate(() => document.getElementsByClassName("katex").length > 0)
 
-    // https://github.com/gildas-lormeau/single-file-cli/blob/v2.0.75/single-file-cli-api.js#L258
-    // https://github.com/gildas-lormeau/single-file-cli/blob/v2.0.75/lib/cdp-client.js#L332
-    // https://github.com/gildas-lormeau/single-file-core/blob/212a657/single-file.js#L125
-    // @ts-expect-error
-    const pageData = await page.evaluate(async options => await singlefile.getPageData(options), {
-      zipScript: ZIP_SCRIPT
+    // Remove unnecessary elements from the page
+    await page.evaluate(async () => {
+      // About Gemini
+      document.getElementsByTagName("top-bar-actions")[0]?.remove()
+
+      // Sign in buttons
+      document.getElementsByClassName("boqOnegoogleliteOgbOneGoogleBar")[0]?.remove()
+      document.getElementsByClassName("share-landing-page_footer")[0]?.remove()
+
+      // Copy and flag buttons
+      for (const matButton of document.querySelectorAll("[mat-icon-button]")) matButton.remove()
+
+      // Replace mat-icon with equivalent SVGs, as the icon font is heavy
+      // e.g. expand button for reasoning steps, Deep Research steps
+      const matIcons = document.getElementsByTagName("mat-icon")
+      while (matIcons.length > 0) {
+        const matIcon = matIcons[0]!
+        const iconName = matIcon.getAttribute("fonticon")
+        const size = getComputedStyle(matIcon).fontSize
+
+        const img = document.createElement("img")
+        img.src = `https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsoutlined/${iconName}/default/${size}.svg`
+        matIcon.insertAdjacentElement("afterend", img)
+        matIcon.remove()
+      }
+
+      // Disclaimer
+      document.getElementsByClassName("share-viewer_footer_disclaimer")[0]?.remove()
+      // Legal links
+      const legalLinks = document.getElementsByClassName("share-viewer_legal-links")[0] as HTMLDivElement | undefined
+      if (legalLinks) {
+        legalLinks.style.paddingTop = "0"
+        while (legalLinks.children.length > 0) legalLinks.children[0]!.remove()
+      }
+
+      // Script tags
+      const scriptTags = document.getElementsByTagName("script")
+      while (scriptTags.length > 0) scriptTags[0]!.remove()
+
+      // Remove inline CSS variables to make the later step of removing unused CSS variables easier
+      // <div style="--a: 0px"> ...
+      // <div style='--a: 0px'> ...
+      for (const elWithStyleAttribute of document.querySelectorAll("[style]")) {
+        if (elWithStyleAttribute.getAttribute("style")!.includes("--")) elWithStyleAttribute.removeAttribute("style")
+      }
     })
 
+    // @ts-expect-error
+    const pageData: { content: string } = await page.evaluate(async options => await singlefile.getPageData(options), {
+      // https://github.com/gildas-lormeau/single-file-cli/blob/v2.0.75/single-file-cli-api.js#L258
+      // https://github.com/gildas-lormeau/single-file-cli/blob/v2.0.75/lib/cdp-client.js#L332
+      // https://github.com/gildas-lormeau/single-file-core/blob/212a657/single-file.js#L125
+      zipScript: ZIP_SCRIPT,
+
+      removeUnusedStyles: true,
+      removeUnusedFonts: true,
+      removeFrames: true,
+      insertSingleFileComment: true
+    })
+
+    const variablesUsedInDocument = new Set(
+      // Variable values could contain other values, so /var\(([^\)]+)/g won't work
+      // e.g. --a: var(--b, var(--c));
+      Array.from(pageData.content.matchAll(/var\s*\(\s*(?<variableName>--[A-Za-z0-9\-]+)/g)).map(
+        regExpExecArray => regExpExecArray.groups!["variableName"]!
+      )
+    )
+
     const fileContent = pageData.content
-      .replaceAll(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>\s*/gi, "")
+      // Remove fonts
       .replaceAll(/@font-face\s*{[^}]*}/g, (fontFaceRule: string) => {
-        const fontFamilyMatch = fontFaceRule.match(/font-family:\s*(?<quote>['"]?)(?<fontFamily>[^'"]+)\k<quote>;/)
+        const fontFamilyMatch = fontFaceRule.match(/font-family:\s*(?<quote>['"]?)(?<fontFamily>[^'"]+)\k<quote>/)
+        const fontFamily = fontFamilyMatch?.groups?.["fontFamily"]?.trim() ?? ""
 
-        if (fontFamilyMatch && fontFamilyMatch.groups?.["fontFamily"]) {
-          const fontFamily = fontFamilyMatch.groups?.["fontFamily"].trim()
-          if (fontFamily === "Google Symbols") return fontFaceRule
-          if (pageData.content.includes(`class="katex"`) && fontFamily.startsWith("KaTeX")) return fontFaceRule
-        }
-
+        if (includesKatex && fontFamily.startsWith("KaTeX")) return fontFaceRule
         return ""
       })
+      // Remove unused CSS variables
+      .replaceAll(
+        // --a: 0px; } .class { ...
+        /(?<variableName>--[A-Za-z0-9\-]+)\s*:\s*(?<value>[^;\n\}]+)\s*[;\n]?(?<curlyBrace>\})?/gm,
+        (_match, variableName: string, value: string, curlyBrace: string | undefined = "") => {
+          if (variablesUsedInDocument.has(variableName)) return `${variableName}:${value};${curlyBrace}`
+          return curlyBrace
+        }
+      )
 
     // Remove illegal filename chars
     const sanitizedTitle = title.replace(/[\\/:*?"<>|\n]/g, "").substring(0, 100)
