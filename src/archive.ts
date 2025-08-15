@@ -1,10 +1,10 @@
 import { mkdir, writeFile } from "fs/promises"
-import { join } from "path"
+import { join, resolve } from "path"
 
 import { queue } from "async"
 import { type Browser, chromium } from "playwright"
 
-import { ARCHIVE_DIR } from "./constants.js"
+import { ARCHIVE_DIR, WORKSPACE_ROOT } from "./constants.js"
 import {
   archiveConversation,
   buildCommitMessage,
@@ -55,4 +55,4 @@ try {
 
 // Compose commit message and output it for workflow
 const commitMessage = buildCommitMessage(added, deleted)
-await writeFile(".git/commit-msg", commitMessage, "utf8")
+await writeFile(resolve(WORKSPACE_ROOT, "./.git/commit-msg"), commitMessage, "utf8")

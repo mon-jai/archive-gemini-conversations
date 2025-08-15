@@ -3,11 +3,11 @@ import { join } from "path"
 
 import type { Browser } from "playwright"
 
-import { ARCHIVE_DIR, HOOK_SCRIPT, SCRIPT, ZIP_SCRIPT } from "./constants.js"
+import { ARCHIVE_DIR, HOOK_SCRIPT, SCRIPT, WORKSPACE_ROOT, ZIP_SCRIPT } from "./constants.js"
 
 export async function getGeminiIdsFromMarkdowns(): Promise<Set<string>> {
   const ids = new Set<string>()
-  const markdownFiles = glob("**/*.md")
+  const markdownFiles = glob(`${WORKSPACE_ROOT}/**/*.md`)
 
   for await (const markdownFile of markdownFiles) {
     const readme = await readFile(markdownFile, "utf8")

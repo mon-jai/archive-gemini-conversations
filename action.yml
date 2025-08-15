@@ -1,0 +1,71 @@
+name: Archive Gemini Conversations
+
+runs:
+  using: "composite"
+  steps:
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 23
+
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v4
+      with:
+        version: 10
+
+    - name: Get pnpm store path
+      shell: bash
+      run: echo "pnpm_store_path=$(pnpm store path)" >> $GITHUB_ENV
+
+    - name: Generate checksum of pnpm-lock.yaml
+      shell: bash
+      # hashFiles() only works for files inside GITHUB_WORKSPACE
+      # https://docs.github.com/en/actions/reference/workflows-and-actions/expressions#hashfiles
+      run: echo "pnpm_lock_file_hash=$(sha256sum '${{ github.action_path }}/pnpm-lock.yaml')" >> $GITHUB_ENV
+
+    - name: Cache pnpm dependencies
+      uses: actions/cache@v4
+      with:
+        path: ${{ env.pnpm_store_path }}
+        key: pnpm-${{ env.pnpm_lock_file_hash }}
+
+    - name: Get Playwright version
+      shell: bash
+      # https://github.com/microsoft/playwright/issues/7249#issuecomment-2664215505
+      run: echo "playwright_version=$(jq -r '.dependencies.playwright' '${{ github.action_path }}/package.json')" >> $GITHUB_ENV
+
+    - name: Cache Playwright executables
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/ms-playwright
+        key: playwright-${{ env.playwright_version }}
+
+    - name: Install dependencies
+      shell: bash
+      working-directory: ${{ github.action_path }}
+      run: |
+        pnpm install
+        pnpm exec playwright install chromium
+
+    - name: Checkout repository
+      uses: actions/checkout@v5
+
+    - name: Archive Gemini conversations
+      shell: bash
+      working-directory: ${{ github.action_path }}
+      run: pnpm start ${{ github.workspace }}
+
+    - name: Commit changes
+      shell: bash
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+        git add --all
+        git diff --cached --quiet && echo "No changes detected. Exiting" && exit 0
+
+        git commit --file .git/commit-msg
+        git fetch origin
+        git rebase origin
+        git push
+        cat .git/commit-msg
