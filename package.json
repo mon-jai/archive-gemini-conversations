@@ -9,6 +9,7 @@
     "@swc-node/register": "^1.10.10",
     "async": "^3.2.6",
     "playwright": "^1.54.2",
+    "sanitize-filename": "^1.6.3",
     "single-file-cli": "^2.0.75"
   },
   "devDependencies": {

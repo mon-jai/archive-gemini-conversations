@@ -1,7 +1,8 @@
-import { glob, readFile, readdir, unlink, writeFile } from "fs/promises"
+import { glob, readFile, readdir, writeFile } from "fs/promises"
 import { join } from "path"
 
 import type { Browser } from "playwright"
+import sanitize from "sanitize-filename"
 
 import { ARCHIVE_DIR, HOOK_SCRIPT, SCRIPT, WORKSPACE_ROOT, ZIP_SCRIPT } from "./constants.js"
 
@@ -23,17 +24,11 @@ export async function getArchivedConversations(archiveDir: string): Promise<Map<
   const map = new Map<string, string>()
 
   for (const file of files) {
-    const match = file.match(/^(?<id>[^-]+) - .*\.html$/)
+    const match = file.match(/^(?<id>[a-z0-9-]+) - .*\.html$/)
     if (match) map.set(match.groups?.["id"] as string, file)
   }
 
   return map
-}
-
-export async function deleteFile(filePath: string) {
-  return await unlink(filePath)
-    .then(() => true)
-    .catch(() => false)
 }
 
 export async function archiveConversation(browser: Browser, id: string) {
@@ -51,9 +46,9 @@ export async function archiveConversation(browser: Browser, id: string) {
     await page.waitForTimeout(3000)
 
     // Click all visible elements with text "Show"
-    for (const btn of await page.getByText("Show").all()) await btn.click()
+    for (const button of await page.getByText("Show").all()) await button.click()
     // Click all visible elements with text "More" (Deep Research)
-    for (const btn of await page.getByText("More").all()) await btn.click()
+    for (const button of await page.getByText("More").all()) await button.click()
 
     // In some shared conversations, title does not exists
     // page.evaluate: TypeError: Cannot read properties of null (reading 'textContent')
@@ -148,24 +143,22 @@ export async function archiveConversation(browser: Browser, id: string) {
       )
 
     // Remove illegal filename chars
-    const sanitizedTitle = title.replace(/[\\/:*?"<>|\n]/g, "").substring(0, 100)
+    const sanitizedTitle = sanitize(title).substring(0, 100)
     const filepath = join(ARCHIVE_DIR, `${id} - ${sanitizedTitle}.html`)
     await writeFile(filepath, fileContent)
-
-    await page.close()
-  } catch (err) {
+  } catch (error) {
+    console.error(`Failed to archive ${id}: ${(error as Error).message}`)
+    throw error
+  } finally {
     if (page) await page.close()
-
-    console.error(`Failed to archive ${id}: ${(err as Error).message}`)
-    throw err
   }
 }
 
 export function buildCommitMessage(added: string[], deleted: string[]): string {
-  let msg = "chore: Automatic conversation archive\n"
+  let message = "chore: automatic update of conversation archive\n"
 
-  if (added.length > 0) msg += `\nAdded conversations: ${added.join(", ")}`
-  if (deleted.length > 0) msg += `\nDeleted conversations: ${deleted.join(", ")}`
+  if (added.length > 0) message += `\nAdded conversations: ${added.join(", ")}`
+  if (deleted.length > 0) message += `\nDeleted conversations: ${deleted.join(", ")}`
 
-  return msg
+  return message
 }

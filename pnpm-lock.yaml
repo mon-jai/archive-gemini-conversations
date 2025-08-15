@@ -17,6 +17,9 @@ importers:
       playwright:
         specifier: ^1.54.2
         version: 1.54.2
+      sanitize-filename:
+        specifier: ^1.6.3
+        version: 1.6.3
       single-file-cli:
         specifier: ^2.0.75
         version: 2.0.75
@@ -253,6 +256,9 @@ packages:
     engines: {node: '>=18'}
     hasBin: true
 
+  sanitize-filename@1.6.3:
+    resolution: {integrity: sha512-y/52Mcy7aw3gRm7IrcGDFx/bCk4AhRh2eI9luHOQM86nZsqwiRkkq2GekHXBBD+SmPidc8i2PqtYZl+pWJ8Oeg==}
+
   simple-cdp@1.8.6:
     resolution: {integrity: sha512-c33zKvBOOIBfdfDCr++N8Dv6kY03wD+cGuu3MEiBJHC4LtHE5aSwjw5E+dOSeuXolS+8MoDzYuWrJdT+IFp8bw==}
     engines: {bun: '>=1.0', deno: '>=1.4'}
@@ -269,6 +275,9 @@ packages:
     resolution: {integrity: sha512-UjgapumWlbMhkBgzT7Ykc5YXUT46F0iKu8SGXq0bcwP5dz/h0Plj6enJqjz1Zbq2l5WaqYnrVbwWOWMyF3F47g==}
     engines: {node: '>=0.10.0'}
 
+  truncate-utf8-bytes@1.0.2:
+    resolution: {integrity: sha512-95Pu1QXQvruGEhv62XCMO3Mm90GscOCClvrIUwCM0PYOXK3kaF3l3sIHxx71ThJfcbM2O5Au6SO3AWCSEfW4mQ==}
+
   tslib@2.8.1:
     resolution: {integrity: sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w==}
 
@@ -279,6 +288,9 @@ packages:
 
   undici-types@7.10.0:
     resolution: {integrity: sha512-t5Fy/nfn+14LuOc2KNYg75vZqClpAiqscVvMygNnlsHBFpSXdJaYtXMcdNLpl/Qvc3P2cB3s6lOV51nqsFq4ag==}
+
+  utf8-byte-length@1.0.5:
+    resolution: {integrity: sha512-Xn0w3MtiQ6zoz2vFyUVruaCL53O/DwUvkEeOvj+uulMm0BkUGYWmBYVyElqZaSLhY6ZD0ulfU3aBra2aVT4xfA==}
 
   ws@8.18.3:
     resolution: {integrity: sha512-PEIGCY5tSlUt50cqyMXfCzX+oOPqN0vuGqWzbcJ2xvnkzkq46oOpz7dQaTDBdfICb4N14+GARUDw2XV2N4tvzg==}
@@ -487,6 +499,10 @@ snapshots:
     optionalDependencies:
       fsevents: 2.3.2
 
+  sanitize-filename@1.6.3:
+    dependencies:
+      truncate-utf8-bytes: 1.0.2
+
   simple-cdp@1.8.6: {}
 
   single-file-cli@2.0.75:
@@ -504,10 +520,16 @@ snapshots:
 
   source-map@0.6.1: {}
 
+  truncate-utf8-bytes@1.0.2:
+    dependencies:
+      utf8-byte-length: 1.0.5
+
   tslib@2.8.1: {}
 
   typescript@5.9.2: {}
 
   undici-types@7.10.0: {}
+
+  utf8-byte-length@1.0.5: {}
 
   ws@8.18.3: {}
