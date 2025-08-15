@@ -1,7 +1,6 @@
 {
-  "name": "gemini-archive",
-  "version": "1.0.0",
-  "type": "module",
+  "name": "gemini-archiver",
+  "version": "0.1.0",
   "scripts": {
     "start": "node --import @swc-node/register/esm-register src/archive.ts"
   },
@@ -16,5 +15,7 @@
     "@types/async": "^3.2.25",
     "@types/node": "^24.2.1",
     "typescript": "^5.9.2"
-  }
+  },
+  "type": "module",
+  "private": true
 }
