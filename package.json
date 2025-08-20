@@ -1,8 +1,9 @@
 {
   "name": "archive-gemini-conversations",
   "version": "0.1.0",
+  "main": "src/archive.ts",
   "scripts": {
-    "start": "node --import @swc-node/register/esm-register src/archive.ts"
+    "start": "node --import @swc-node/register/esm-register ."
   },
   "dependencies": {
     "@swc-node/register": "^1.10.10",
