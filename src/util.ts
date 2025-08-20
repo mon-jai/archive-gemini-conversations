@@ -45,15 +45,18 @@ export async function archiveConversation(browser: Browser, id: string) {
     await page.waitForSelector("message-content", { timeout: 20000 })
     await page.waitForTimeout(3000)
 
-    // Click all visible elements with text "Show"
-    for (const button of await page.getByText("Show").all()) await button.click()
-    // Click all visible elements with text "More" (Deep Research)
-    for (const button of await page.getByText("More").all()) await button.click()
-
     // In some shared conversations, title does not exists
     // page.evaluate: TypeError: Cannot read properties of null (reading 'textContent')
     const title = (await page.evaluate(() => document.querySelector("h1 > strong")?.textContent, "")) ?? ""
     const includesKatex = await page.evaluate(() => document.getElementsByClassName("katex").length > 0)
+
+    // Toggling buttons to expand truncated content
+    await page.evaluate(async () => {
+      // Expand "Research Websites" section in Deep Research mode
+      document.querySelector<HTMLButtonElement>('[data-test-id="toggle-description-expansion-button"]')?.click()
+      // Expand instructions text for the Gemini Gem used in the conversation
+      document.querySelector<HTMLButtonElement>('[data-test-id="bot-instruction-see-more-button"]')?.click()
+    })
 
     // Remove unnecessary elements from the page
     await page.evaluate(async () => {
