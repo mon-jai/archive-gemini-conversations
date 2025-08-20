@@ -34,7 +34,7 @@ runs:
       # https://github.com/microsoft/playwright/issues/7249#issuecomment-2664215505
       run: echo "playwright_version=$(jq -r '.dependencies.playwright' '${{ github.action_path }}/package.json')" >> $GITHUB_ENV
 
-    - name: Cache Playwright executables
+    - name: Cache Playwright binaries
       uses: actions/cache@v4
       with:
         path: ~/.cache/ms-playwright
