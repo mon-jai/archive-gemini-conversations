@@ -75,12 +75,22 @@ export async function archiveConversation(browser: Browser, id: string) {
       const matIcons = document.getElementsByTagName("mat-icon")
       while (matIcons.length > 0) {
         const matIcon = matIcons[0]!
-        const iconName = matIcon.getAttribute("fonticon")
-        const size = getComputedStyle(matIcon).fontSize
+        const iconComputedStyle = getComputedStyle(matIcon)
+        const color = iconComputedStyle.color
+        let iconName = matIcon.getAttribute("fonticon")
+        let size = parseInt(iconComputedStyle.fontSize)
 
-        const img = document.createElement("img")
-        img.src = `https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsoutlined/${iconName}/default/${size}.svg`
-        matIcon.insertAdjacentElement("afterend", img)
+        if (iconName === "drive_spreadsheet") iconName = "table"
+        if (size < 20) size = 20
+
+        // https://stackoverflow.com/a/43916743/
+        const newIconEl = document.createElement("div")
+        newIconEl.style.backgroundColor = color
+        newIconEl.style.mask = `url(https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/${iconName}/default/${size}px.svg)`
+        newIconEl.style.width = `${size}px`
+        newIconEl.style.height = `${size}px`
+
+        matIcon.insertAdjacentElement("afterend", newIconEl)
         matIcon.remove()
       }
 
@@ -96,13 +106,6 @@ export async function archiveConversation(browser: Browser, id: string) {
       // Script tags
       const scriptTags = document.getElementsByTagName("script")
       while (scriptTags.length > 0) scriptTags[0]!.remove()
-
-      // Remove inline CSS variables to make the later step of removing unused CSS variables easier
-      // <div style="--a: 0px"> ...
-      // <div style='--a: 0px'> ...
-      for (const elWithStyleAttribute of document.querySelectorAll("[style]")) {
-        if (elWithStyleAttribute.getAttribute("style")!.includes("--")) elWithStyleAttribute.removeAttribute("style")
-      }
     })
 
     // @ts-expect-error
@@ -137,11 +140,12 @@ export async function archiveConversation(browser: Browser, id: string) {
       })
       // Remove unused CSS variables
       .replaceAll(
-        // --a: 0px; } .class { ...
-        /(?<variableName>--[A-Za-z0-9\-]+)\s*:\s*(?<value>[^;\n\}]+)\s*[;\n]?(?<curlyBrace>\})?/gm,
-        (_match, variableName: string, value: string, curlyBrace: string | undefined = "") => {
-          if (variablesUsedInDocument.has(variableName)) return `${variableName}:${value};${curlyBrace}`
-          return curlyBrace
+        // <div style="--a: 0px"> ...
+        // <div style='--a: 0px'> ...
+        /(?<variableName>--[A-Za-z0-9\-]+)\s*:\s*(?<value>(?:(?!["']\s*>)[^;\n\}])+);?/gm,
+        (_match, variableName: string, value: string) => {
+          if (variablesUsedInDocument.has(variableName)) return `${variableName}:${value};`
+          return ""
         }
       )
 
