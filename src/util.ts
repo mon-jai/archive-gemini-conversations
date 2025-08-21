@@ -50,28 +50,36 @@ export async function archiveConversation(browser: Browser, id: string) {
     const title = (await page.evaluate(() => document.querySelector("h1 > strong")?.textContent, "")) ?? ""
     const includesKatex = await page.evaluate(() => document.getElementsByClassName("katex").length > 0)
 
-    // Toggling buttons to expand truncated content
     await page.evaluate(async () => {
-      // Expand "Research Websites" section in Deep Research mode
+      // ----- Toggling buttons to expand truncated contents -----
+      // Expand "Research Websites" section in Deep Research metadata
       document.querySelector<HTMLButtonElement>('[data-test-id="toggle-description-expansion-button"]')?.click()
       // Expand instructions text for the Gemini Gem used in the conversation
       document.querySelector<HTMLButtonElement>('[data-test-id="bot-instruction-see-more-button"]')?.click()
-    })
 
-    // Remove unnecessary elements from the page
-    await page.evaluate(async () => {
-      // About Gemini
+      // ----- Remove unnecessary elements from the page -----
+      // About Gemini section
       document.getElementsByTagName("top-bar-actions")[0]?.remove()
-
-      // Sign in buttons
+      // Sign-in buttons
       document.getElementsByClassName("boqOnegoogleliteOgbOneGoogleBar")[0]?.remove()
       document.getElementsByClassName("share-landing-page_footer")[0]?.remove()
-
       // Copy and flag buttons
-      for (const matButton of document.querySelectorAll("[mat-icon-button]")) matButton.remove()
+      const linkActionButtons = document.getElementsByClassName("link-action-buttons")?.[0]?.children
+      if (linkActionButtons) while (linkActionButtons.length > 0) linkActionButtons[0]!.remove()
+      // Disclaimer section
+      document.getElementsByClassName("share-viewer_footer_disclaimer")[0]?.remove()
+      // Legal links
+      const legalLinks = document.getElementsByClassName("share-viewer_legal-links")[0] as HTMLDivElement | undefined
+      if (legalLinks) {
+        legalLinks.style.paddingTop = "0"
+        while (legalLinks.children.length > 0) legalLinks.children[0]!.remove()
+      }
+      // Script tags
+      const scriptTags = document.getElementsByTagName("script")
+      while (scriptTags.length > 0) scriptTags[0]!.remove()
 
-      // Replace mat-icon with equivalent SVGs, as the icon font is heavy
-      // e.g. expand button for reasoning steps, Deep Research steps
+      // ----- Replace font-based <mat-icon /> with their SVG equivalents to reduce bundle size -----
+      // For example, expand button for chain of thought, Deep Research steps, etc.
       const matIcons = document.getElementsByTagName("mat-icon")
       while (matIcons.length > 0) {
         const matIcon = matIcons[0]!
@@ -89,23 +97,9 @@ export async function archiveConversation(browser: Browser, id: string) {
         newIconEl.style.mask = `url(https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/${iconName}/default/${size}px.svg)`
         newIconEl.style.width = `${size}px`
         newIconEl.style.height = `${size}px`
-
         matIcon.insertAdjacentElement("afterend", newIconEl)
         matIcon.remove()
       }
-
-      // Disclaimer
-      document.getElementsByClassName("share-viewer_footer_disclaimer")[0]?.remove()
-      // Legal links
-      const legalLinks = document.getElementsByClassName("share-viewer_legal-links")[0] as HTMLDivElement | undefined
-      if (legalLinks) {
-        legalLinks.style.paddingTop = "0"
-        while (legalLinks.children.length > 0) legalLinks.children[0]!.remove()
-      }
-
-      // Script tags
-      const scriptTags = document.getElementsByTagName("script")
-      while (scriptTags.length > 0) scriptTags[0]!.remove()
     })
 
     // @ts-expect-error
@@ -138,7 +132,7 @@ export async function archiveConversation(browser: Browser, id: string) {
         if (includesKatex && fontFamily.startsWith("KaTeX")) return fontFaceRule
         return ""
       })
-      // Remove unused CSS variables
+      // Remove unused CSS variable decelerations
       .replaceAll(
         // <div style="--a: 0px"> ...
         // <div style='--a: 0px'> ...
