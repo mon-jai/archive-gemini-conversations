@@ -2,7 +2,7 @@ import { mkdir, unlink, writeFile } from "fs/promises"
 import { join, resolve } from "path"
 
 import { queue } from "async"
-import { type Browser, chromium } from "playwright"
+import { chromium } from "playwright"
 
 import { ARCHIVE_DIR, WORKSPACE_ROOT } from "./constants.js"
 import { archiveConversation, buildCommitMessage, getArchivedConversations, getGeminiIdsFromMarkdowns } from "./util.js"
@@ -23,20 +23,17 @@ for (const id of staleIds) {
 }
 
 // Archive new conversations, at most 10 concurrently
-let browser: Browser | null = null
-try {
-  browser = await chromium.launch({ args: ["--disable-web-security"] })
-
-  const archiveQueue = queue<string>(async (id, callback) => {
+await using browser = await chromium.launch({ args: ["--disable-web-security"] })
+const archiveQueue = queue<string>(async (id, callback) => {
+  try {
     await archiveConversation(browser!, id)
     callback()
-  }, 10)
-
-  archiveQueue.push(newIds)
-  await archiveQueue.drain()
-} finally {
-  if (browser) await browser.close()
-}
+  } catch (error) {
+    console.error(`Failed to archive ${id}: ${(error as Error).message}`)
+  }
+}, 10)
+archiveQueue.push(newIds)
+await archiveQueue.drain()
 
 // Compose commit message and output it for the workflow
 const commitMessage = buildCommitMessage(newIds, staleIds)
