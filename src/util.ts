@@ -145,6 +145,8 @@ export async function archiveConversation(browser: Browser, id: string) {
           return ""
         }
       )
+      // Remove empty HTML comments
+      .replaceAll("<!---->", "")
 
     // Remove illegal filename chars
     const sanitizedTitle = sanitize(title).substring(0, 100)
