@@ -77,6 +77,9 @@ export async function archiveConversation(browser: Browser, id: string) {
       // Script tags
       const scriptTags = document.getElementsByTagName("script")
       while (scriptTags.length > 0) scriptTags[0]!.remove()
+      // tts-control causes blank spaces at the end of some pages, while isn't displaying anything
+      const ttsControls = document.getElementsByTagName("tts-control")
+      while (ttsControls.length > 0) ttsControls[0]!.remove()
 
       // ----- Replace font-based <mat-icon /> with their SVG equivalents to reduce bundle size -----
       // For example, expand button for chain of thought, Deep Research steps, etc.
