@@ -32,7 +32,9 @@ runs:
     - name: Get Playwright version
       shell: bash
       # https://github.com/microsoft/playwright/issues/7249#issuecomment-2664215505
-      run: echo "playwright_version=$(jq -r '.dependencies.playwright' '${{ github.action_path }}/package.json')" >> $GITHUB_ENV
+      run:
+        echo "playwright_version=$(jq -r '.dependencies.playwright' '${{ github.action_path }}/package.json')" >>
+        $GITHUB_ENV
 
     - name: Cache Playwright binaries
       uses: actions/cache@v4
@@ -49,9 +51,10 @@ runs:
 
     - name: Checkout repository
       uses: actions/checkout@v5
-      # Always check out the latest commit of the branch instead of the commit that triggered the action.
-      # When combined with the `concurrency.group` option in the workflow file that consumed this action,
-      # this prevents a race condition in which a previous automatic update isn't counted when adding or removing content.
+      # Always check out the latest commit of the branch instead of the one that triggered the action.
+      # When combined with the `concurrency.group` option in caller workflows,
+      # which limits the workflow to at most one running instance at a time,
+      # this prevents a race condition in which a previous commit isn't properly handled.
 
       # For example:
       # - Commit 1 (adds ID 'abc')
@@ -61,10 +64,10 @@ runs:
 
       # This fixes the race condition in two ways:
       # - If a user pushes a new commit (commit 2) before the action triggered by the first one has started,
-      #   the action will check out the latest commit (commit 2), not the one that triggered it (commit 1).
+      #   the action will checkout the latest commit (commit 2), not the one that triggered it (commit 1).
       # - If a user pushes a new commit (commit 2) after the first action has started,
-      #   the second action will wait for the first action's automatic commit (commit 3) to be pushed.
-      #   The second action will then check out the latest commit (commit 3) when it runs.
+      #   the second action will wait for the first action to complete, and its automatic commit (commit 3) to be pushed.
+      #   The second action will then checkout the latest commit (commit 3) when it runs.
       with:
         ref: ${{ github.ref_name }}
 
