@@ -24,10 +24,9 @@ for (const id of staleIds) {
 
 // Archive new conversations, at most 10 concurrently
 await using browser = await chromium.launch({ args: ["--disable-web-security"] })
-const archiveQueue = queue<string>(async (id, callback) => {
+const archiveQueue = queue<string>(async id => {
   try {
-    await archiveConversation(browser!, id)
-    callback()
+    await archiveConversation(browser, id)
   } catch (error) {
     console.error(`Failed to archive ${id}: ${(error as Error).message}`)
   }
