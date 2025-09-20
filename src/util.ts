@@ -55,6 +55,23 @@ export async function archiveConversation(browser: Browser, id: string) {
     // Expand instructions text for the Gemini Gem used in the conversation
     document.querySelector<HTMLButtonElement>('[data-test-id="bot-instruction-see-more-button"]')?.click()
 
+    // ----- Replace bot instruction container with a <details> element -----
+    // Wait for the full instruction text to load
+    await new Promise(resolve => requestAnimationFrame(resolve))
+    const botInstructionContainer = document.getElementsByClassName("bot-instruction-container")[0]
+    if (botInstructionContainer) {
+      const labelHTML = botInstructionContainer.querySelector<HTMLSpanElement>(".bot-instruction-label")!.outerHTML
+      const contentHTML = botInstructionContainer.querySelector<HTMLPreElement>(".bot-instruction-content")!.outerHTML
+      const matDividerHTML = botInstructionContainer.querySelector("mat-divider")!.outerHTML
+      botInstructionContainer.innerHTML = `
+        <details>
+          <summary>${labelHTML}</summary>
+          ${contentHTML}
+        </details>
+        ${matDividerHTML}
+      `
+    }
+
     // ----- Remove unnecessary elements from the page -----
     // About Gemini section
     document.getElementsByTagName("top-bar-actions")[0]?.remove()
