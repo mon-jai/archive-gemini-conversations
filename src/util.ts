@@ -25,7 +25,7 @@ export async function getArchivedConversations(archiveDir: string): Promise<Map<
 
   for (const file of files) {
     const match = file.match(/^(?<id>[a-z0-9-]+) - .*\.html$/)
-    if (match) map.set(match.groups?.["id"] as string, file)
+    if (match) map.set(match.groups!["id"] as string, file)
   }
 
   return map
@@ -45,7 +45,7 @@ export async function archiveConversation(browser: Browser, id: string) {
 
   // In some shared conversations, title does not exists
   // page.evaluate: TypeError: Cannot read properties of null (reading 'textContent')
-  const title = (await page.evaluate(() => document.querySelector("h1 > strong")?.textContent, "")) ?? ""
+  const title = await page.evaluate(() => document.querySelector("h1 > strong")?.textContent ?? "")
   const includesKatex = await page.evaluate(() => document.getElementsByClassName("katex").length > 0)
 
   await page.evaluate(async () => {
@@ -62,7 +62,7 @@ export async function archiveConversation(browser: Browser, id: string) {
     document.getElementsByClassName("boqOnegoogleliteOgbOneGoogleBar")[0]?.remove()
     document.getElementsByClassName("share-landing-page_footer")[0]?.remove()
     // Copy and flag buttons
-    const linkActionButtons = document.getElementsByClassName("link-action-buttons")?.[0]?.children
+    const linkActionButtons = document.getElementsByClassName("link-action-buttons")[0]?.children
     if (linkActionButtons) while (linkActionButtons.length > 0) linkActionButtons[0]!.remove()
     // Disclaimer section
     document.getElementsByClassName("share-viewer_footer_disclaimer")[0]?.remove()
@@ -128,7 +128,7 @@ export async function archiveConversation(browser: Browser, id: string) {
     // Remove fonts
     .replaceAll(/@font-face\s*{[^}]*}/g, (fontFaceRule: string) => {
       const fontFamilyMatch = fontFaceRule.match(/font-family:\s*(?<quote>['"]?)(?<fontFamily>[^'"]+)\k<quote>/)
-      const fontFamily = fontFamilyMatch?.groups?.["fontFamily"]?.trim() ?? ""
+      const fontFamily = fontFamilyMatch?.groups!["fontFamily"]!.trim() ?? ""
 
       if (includesKatex && fontFamily.startsWith("KaTeX")) return fontFaceRule
       return ""
