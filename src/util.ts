@@ -81,6 +81,12 @@ export async function archiveConversation(browser: Browser, id: string) {
     // Copy and flag buttons
     const linkActionButtons = document.getElementsByClassName("link-action-buttons")[0]?.children
     if (linkActionButtons) while (linkActionButtons.length > 0) linkActionButtons[0]!.remove()
+    // Copy prompt buttons
+    const copyPromptButtons = document.querySelectorAll('button[aria-label="Copy prompt"]')
+    for (const copyPromptButton of copyPromptButtons) copyPromptButton.remove()
+    // tts-control causes blank spaces at the end of some pages, while isn't displaying anything
+    const ttsControls = document.getElementsByTagName("tts-control")
+    while (ttsControls.length > 0) ttsControls[0]!.remove()
     // Disclaimer section
     document.getElementsByClassName("share-viewer_footer_disclaimer")[0]?.remove()
     // Legal links
@@ -92,9 +98,6 @@ export async function archiveConversation(browser: Browser, id: string) {
     // Script tags
     const scriptTags = document.getElementsByTagName("script")
     while (scriptTags.length > 0) scriptTags[0]!.remove()
-    // tts-control causes blank spaces at the end of some pages, while isn't displaying anything
-    const ttsControls = document.getElementsByTagName("tts-control")
-    while (ttsControls.length > 0) ttsControls[0]!.remove()
 
     // ----- Replace font-based <mat-icon /> with their SVG equivalents to reduce bundle size -----
     // For example, expand button for chain of thought, Deep Research steps, etc.
