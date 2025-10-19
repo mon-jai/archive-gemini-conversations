@@ -26,7 +26,7 @@ for (const id of staleIds) {
 await using browser = await chromium.launch({ args: ["--disable-web-security"] })
 const archiveQueue = queue<string>(async id => {
   try {
-    await archiveConversation(browser, id)
+    await archiveConversation(id, browser)
   } catch (error) {
     console.error(`Failed to archive ${id}: ${(error as Error).message}`)
   }

@@ -6,6 +6,10 @@ import sanitize from "sanitize-filename"
 
 import { ARCHIVE_DIR, HOOK_SCRIPT, SCRIPT, WORKSPACE_ROOT, ZIP_SCRIPT } from "./constants.js"
 
+declare namespace singlefile {
+  function getPageData(options: Record<string, any>): Promise<{ content: string }>
+}
+
 export async function getGeminiIdsFromMarkdowns(): Promise<Set<string>> {
   const ids = new Set<string>()
   const markdownFiles = glob(`${WORKSPACE_ROOT}/**/*.md`)
@@ -31,7 +35,7 @@ export async function getArchivedConversations(archiveDir: string): Promise<Map<
   return map
 }
 
-export async function archiveConversation(browser: Browser, id: string) {
+export async function archiveConversation(id: string, browser: Browser) {
   const url = `https://gemini.google.com/share/${id}`
 
   await using page = await browser.newPage({ bypassCSP: true })
@@ -49,28 +53,11 @@ export async function archiveConversation(browser: Browser, id: string) {
   const includesKatex = await page.evaluate(() => document.getElementsByClassName("katex").length > 0)
 
   await page.evaluate(async () => {
-    // ----- Toggling buttons to expand truncated contents -----
+    // ----- Toggle buttons to expand truncated contents -----
     // Expand "Research Websites" section in Deep Research metadata
     document.querySelector<HTMLButtonElement>('[data-test-id="toggle-description-expansion-button"]')?.click()
     // Expand instructions text for the Gemini Gem used in the conversation
     document.querySelector<HTMLButtonElement>('[data-test-id="bot-instruction-see-more-button"]')?.click()
-
-    // ----- Replace bot instruction container with a <details> element -----
-    // Wait for the full instruction text to load
-    await new Promise(resolve => requestAnimationFrame(resolve))
-    const botInstructionContainer = document.getElementsByClassName("bot-instruction-container")[0]
-    if (botInstructionContainer) {
-      const labelHTML = botInstructionContainer.querySelector<HTMLSpanElement>(".bot-instruction-label")!.outerHTML
-      const contentHTML = botInstructionContainer.querySelector<HTMLPreElement>(".bot-instruction-content")!.outerHTML
-      const matDividerHTML = botInstructionContainer.querySelector("mat-divider")!.outerHTML
-      botInstructionContainer.innerHTML = `
-        <details>
-          <summary>${labelHTML}</summary>
-          ${contentHTML}
-        </details>
-        ${matDividerHTML}
-      `
-    }
 
     // ----- Remove unnecessary elements from the page -----
     // About Gemini section
@@ -99,6 +86,23 @@ export async function archiveConversation(browser: Browser, id: string) {
     const scriptTags = document.getElementsByTagName("script")
     while (scriptTags.length > 0) scriptTags[0]!.remove()
 
+    // ----- Replace bot instruction container with a <details> element -----
+    // Wait for the full instruction text to load
+    await new Promise(resolve => requestAnimationFrame(resolve))
+    const botInstructionContainer = document.getElementsByClassName("bot-instruction-container")[0]
+    if (botInstructionContainer) {
+      const labelHTML = botInstructionContainer.querySelector<HTMLSpanElement>(".bot-instruction-label")!.outerHTML
+      const contentHTML = botInstructionContainer.querySelector<HTMLPreElement>(".bot-instruction-content")!.outerHTML
+      const matDividerHTML = botInstructionContainer.querySelector("mat-divider")!.outerHTML
+      botInstructionContainer.innerHTML = `
+        <details>
+          <summary>${labelHTML}</summary>
+          ${contentHTML}
+        </details>
+        ${matDividerHTML}
+      `
+    }
+
     // ----- Replace font-based <mat-icon /> with their SVG equivalents to reduce bundle size -----
     // For example, expand button for chain of thought, Deep Research steps, etc.
     const matIcons = document.getElementsByTagName("mat-icon")
@@ -123,53 +127,52 @@ export async function archiveConversation(browser: Browser, id: string) {
     }
   })
 
-  // @ts-expect-error
-  const pageData: { content: string } = await page.evaluate(async options => await singlefile.getPageData(options), {
+  const getPageDataOptions = {
     // https://github.com/gildas-lormeau/single-file-cli/blob/v2.0.75/single-file-cli-api.js#L258
     // https://github.com/gildas-lormeau/single-file-cli/blob/v2.0.75/lib/cdp-client.js#L332
     // https://github.com/gildas-lormeau/single-file-core/blob/212a657/single-file.js#L125
     zipScript: ZIP_SCRIPT,
-
-    removeUnusedStyles: true,
-    removeUnusedFonts: true,
-    removeFrames: true,
-    insertSingleFileComment: true
-  })
+    // https://github.com/gildas-lormeau/SingleFile-MV3/blob/4903b74/src/core/bg/config.js#L45
+    ...{ removeUnusedStyles: true, removeUnusedFonts: true, removeFrames: true, insertSingleFileComment: true }
+  }
+  const documentHTML = await page.evaluate(
+    async options => singlefile.getPageData(options).then(({ content }) => content),
+    getPageDataOptions
+  )
 
   const variablesUsedInDocument = new Set(
     // Variable values could contain other values, so /var\(([^\)]+)/g won't work
     // e.g. --a: var(--b, var(--c));
-    Array.from(pageData.content.matchAll(/var\s*\(\s*(?<variableName>--[A-Za-z0-9\-]+)/g)).map(
+    Array.from(documentHTML.matchAll(/var\s*\(\s*(?<variableName>--[A-Za-z0-9\-]+)/g)).map(
       regExpExecArray => regExpExecArray.groups!["variableName"]!
     )
   )
 
-  const fileContent = pageData.content
-    // Remove fonts
-    .replaceAll(/@font-face\s*{[^}]*}/g, (fontFaceRule: string) => {
-      const fontFamilyMatch = fontFaceRule.match(/font-family:\s*(?<quote>['"]?)(?<fontFamily>[^'"]+)\k<quote>/)
-      const fontFamily = fontFamilyMatch?.groups!["fontFamily"]!.trim() ?? ""
-
-      if (includesKatex && fontFamily.startsWith("KaTeX")) return fontFaceRule
-      return ""
-    })
+  const fileContent = documentHTML
+    // Remove empty HTML comments
+    .replaceAll("<!---->", "")
     // Remove unused CSS variable decelerations
+    // <div style="--a: 0px"> ...
     .replaceAll(
-      // <div style="--a: 0px"> ...
-      // <div style='--a: 0px'> ...
       /(?<variableName>--[A-Za-z0-9\-]+)\s*:\s*(?<value>(?:(?!["']\s*>)[^;\n\}])+);?/gm,
       (_match, variableName: string, value: string) => {
         if (variablesUsedInDocument.has(variableName)) return `${variableName}:${value};`
         return ""
       }
     )
-    // Remove empty HTML comments
-    .replaceAll("<!---->", "")
+    // Remove base64 font declarations
+    .replaceAll(/@font-face\s*{[^}]*}/g, (fontFaceRule: string) => {
+      const fontFamilyMatch = fontFaceRule.match(/font-family\s*:\s*(?<quote>['"]?)(?<fontFamily>[^'",]+)\k<quote>/)
+      const fontFamily = fontFamilyMatch?.groups!["fontFamily"]!.trim() ?? ""
 
-  // Remove illegal filename chars
-  const sanitizedTitle = sanitize(title).substring(0, 100)
-  const filepath = join(ARCHIVE_DIR, `${id} - ${sanitizedTitle}.html`)
-  await writeFile(filepath, fileContent)
+      if (includesKatex && fontFamily.startsWith("KaTeX")) return fontFaceRule
+      return ""
+    })
+
+  // Remove illegal filename characters
+  const fileName = `${id} - ${sanitize(title).substring(0, 100)}.html`
+  const filePath = join(ARCHIVE_DIR, fileName)
+  await writeFile(filePath, fileContent)
 }
 
 export function buildCommitMessage(added: string[], deleted: string[]): string {
