@@ -71,6 +71,10 @@ export async function archiveConversation(id: string, browser: Browser) {
     // Copy prompt buttons
     const copyPromptButtons = document.querySelectorAll('button[aria-label="Copy prompt"]')
     for (const copyPromptButton of copyPromptButtons) copyPromptButton.remove()
+    // Sources buttons
+    // They won't work anyways since we are removing all script tags
+    const sourcesButtons = document.getElementsByTagName("sources-carousel-inline")
+    while (sourcesButtons.length > 0) sourcesButtons[0]!.remove()
     // tts-control causes blank spaces at the end of some pages, while isn't displaying anything
     const ttsControls = document.getElementsByTagName("tts-control")
     while (ttsControls.length > 0) ttsControls[0]!.remove()
