@@ -113,19 +113,28 @@ export async function archiveConversation(id: string, browser: Browser) {
     while (matIcons.length > 0) {
       const matIcon = matIcons[0]!
       const iconComputedStyle = getComputedStyle(matIcon)
-      const color = iconComputedStyle.color
-      let iconName = matIcon.getAttribute("fonticon")
-      let size = parseInt(iconComputedStyle.fontSize)
+      const iconAttribute = matIcon.getAttribute("fonticon")
 
-      if (iconName === "drive_spreadsheet") iconName = "table"
-      if (size < 20) size = 20
+      const iconColor = iconComputedStyle.color
+      const iconSize = parseInt(iconComputedStyle.fontSize)
+      const iconName = iconAttribute == "drive_spreadsheet" ? "table" : iconAttribute
+      // Find the "optical size" variant closest to the size of the original icon
+      const replacementIconSize = [20, 24, 40, 48].reduce((accumulator, variant) =>
+        Math.abs(variant - iconSize) < Math.abs(accumulator - iconSize) ? variant : accumulator
+      )
 
       // https://stackoverflow.com/a/43916743/
       const newIconEl = document.createElement("div")
-      newIconEl.style.backgroundColor = color
-      newIconEl.style.mask = `url(https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/${iconName}/default/${size}px.svg)`
-      newIconEl.style.width = `${size}px`
-      newIconEl.style.height = `${size}px`
+      newIconEl.style.backgroundColor = iconColor
+      newIconEl.style.mask = `url(https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/${iconName}/default/${replacementIconSize}px.svg)`
+      newIconEl.style.width = `${replacementIconSize}px`
+      newIconEl.style.height = `${replacementIconSize}px`
+      // Info icon for the "Uploaded file not shown" message
+      if (iconSize != replacementIconSize) {
+        newIconEl.style.transform = `scale(${iconSize / replacementIconSize})`
+        newIconEl.style.transformOrigin = "top left"
+      }
+
       matIcon.insertAdjacentElement("afterend", newIconEl)
       matIcon.remove()
     }
