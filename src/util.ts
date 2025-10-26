@@ -90,6 +90,39 @@ export async function archiveConversation(id: string, browser: Browser) {
     const scriptTags = document.getElementsByTagName("script")
     while (scriptTags.length > 0) scriptTags[0]!.remove()
 
+    // ----- Remove custom scrollbar -----
+    function checkAndDeleteScrollbarRuleRecursively(indexStr: string, source: CSSStyleSheet | CSSMediaRule) {
+      const index = parseInt(indexStr)
+      const rule = source.cssRules[index]!
+      if (rule instanceof CSSMediaRule) {
+        for (const mediaIndexStr in rule.cssRules) checkAndDeleteScrollbarRuleRecursively(mediaIndexStr, rule)
+      } else if (rule instanceof CSSStyleRule && rule.selectorText.includes("::-webkit-scrollbar")) {
+        source.deleteRule(index)
+      }
+    }
+    for (const styleSheet of document.styleSheets) {
+      for (const indexStr in styleSheet.cssRules) {
+        checkAndDeleteScrollbarRuleRecursively(indexStr, styleSheet)
+      }
+    }
+    const pageStyles = new CSSStyleSheet()
+    pageStyles.replaceSync(`
+      :has(message-content) {
+        overflow: unset !important;
+        position: unset !important;
+      }
+
+      .desktop-ogb-buffer {
+        background: var(--bard-color-synthetic--chat-window-surface);
+        padding-block: calc(6px + 12px) calc(6px + 10px) !important;
+        margin-block: 0 !important;
+        position: sticky;
+        top: 0;
+        z-index: 2;
+      }
+    `)
+    document.adoptedStyleSheets = [...document.adoptedStyleSheets, pageStyles]
+
     // ----- Replace bot instruction container with a <details> element -----
     // Wait for the full instruction text to load
     await new Promise(resolve => requestAnimationFrame(resolve))
