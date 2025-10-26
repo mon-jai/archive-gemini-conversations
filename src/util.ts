@@ -214,6 +214,39 @@ export async function archiveConversation(id: string, browser: Browser) {
       if (includesKatex && fontFamily.startsWith("KaTeX")) return fontFaceRule
       return ""
     })
+    // Make the page print friendly
+    .concat(`
+      <style>
+        @media print {
+          .side-nav-menu-button {
+            position: unset !important;
+            justify-content: start !important;
+            margin-left: 0 !important;
+          }
+
+          .bard-logo-container {
+            padding-left: 0 !important;
+          }
+
+          /* Remove buffer area for the (now static) header */
+          .desktop-ogb-buffer {
+            display: none !important;
+          }
+
+          .chat-history {
+            padding-inline: 0 !important;
+          }
+
+          .avatar-gutter {
+            display: none !important;
+          }
+
+          .markdown-main-panel {
+            margin-right: 0 !important;
+          }
+        }
+      </style>
+    `)
 
   // Remove illegal filename characters
   const fileName = `${id} - ${sanitize(title).substring(0, 100)}.html`
