@@ -10,6 +10,11 @@ declare namespace singlefile {
   function getPageData(options: Record<string, any>): Promise<{ content: string }>
 }
 
+type DummyTagFunction = (...args: Parameters<typeof String.raw>) => string
+
+// @ts-expect-error
+const html: DummyTagFunction = (template, ...substitutions) => String.raw({ raw: template }, ...substitutions)
+
 export async function getGeminiIdsFromMarkdowns(): Promise<Set<string>> {
   const ids = new Set<string>()
   const markdownFiles = glob(`${WORKSPACE_ROOT}/**/*.md`)
@@ -53,6 +58,12 @@ export async function archiveConversation(id: string, browser: Browser) {
   const includesKatex = await page.evaluate(() => document.getElementsByClassName("katex").length > 0)
 
   await page.evaluate(async () => {
+    const dummyTagFunction: DummyTagFunction = (template, ...substitutions) =>
+      // @ts-expect-error
+      String.raw({ raw: template }, ...substitutions)
+    const html = dummyTagFunction
+    const css = dummyTagFunction
+
     // ----- Toggle buttons to expand truncated contents -----
     // Expand "Research Websites" section in Deep Research metadata
     document.querySelector<HTMLButtonElement>('[data-test-id="toggle-description-expansion-button"]')?.click()
@@ -106,7 +117,7 @@ export async function archiveConversation(id: string, browser: Browser) {
       }
     }
     const pageStyles = new CSSStyleSheet()
-    pageStyles.replaceSync(`
+    pageStyles.replaceSync(css`
       :has(message-content) {
         overflow: unset !important;
         position: unset !important;
@@ -131,7 +142,7 @@ export async function archiveConversation(id: string, browser: Browser) {
       const labelHTML = botInstructionContainer.querySelector<HTMLSpanElement>(".bot-instruction-label")!.outerHTML
       const contentHTML = botInstructionContainer.querySelector<HTMLPreElement>(".bot-instruction-content")!.outerHTML
       const matDividerHTML = botInstructionContainer.querySelector("mat-divider")!.outerHTML
-      botInstructionContainer.innerHTML = `
+      botInstructionContainer.innerHTML = html`
         <details>
           <summary>${labelHTML}</summary>
           ${contentHTML}
@@ -215,7 +226,7 @@ export async function archiveConversation(id: string, browser: Browser) {
       return ""
     })
     // Make the page print friendly
-    .concat(`
+    .concat(html`
       <style>
         @media print {
           .side-nav-menu-button {
