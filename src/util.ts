@@ -70,6 +70,21 @@ export async function archiveConversation(id: string, browser: Browser) {
     // Expand instructions text for the Gemini Gem used in the conversation
     document.querySelector<HTMLButtonElement>('[data-test-id="bot-instruction-see-more-button"]')?.click()
 
+    // --- Prevent horizontal overflow on mobile devices ---
+    const overflowStyles = new CSSStyleSheet()
+    overflowStyles.replaceSync(css`
+      .content-wrapper {
+        max-width: 100vw;
+      }
+
+      /* Wrapper for tables */
+      .horizontal-scroll-wrapper {
+        margin-inline: 0 !important;
+        padding-inline: 0 !important;
+      }
+    `)
+    document.adoptedStyleSheets.push(overflowStyles)
+
     // ----- Remove unnecessary elements from the page -----
     // About Gemini section
     document.getElementsByTagName("top-bar-actions")[0]?.remove()
@@ -116,13 +131,22 @@ export async function archiveConversation(id: string, browser: Browser) {
         checkAndDeleteScrollbarRuleRecursively(indexStr, styleSheet)
       }
     }
-    const pageStyles = new CSSStyleSheet()
-    pageStyles.replaceSync(css`
+    const scrollbarStyles = new CSSStyleSheet()
+    scrollbarStyles.replaceSync(css`
       :has(message-content) {
         overflow: unset !important;
         position: unset !important;
       }
 
+      /* As a side effect of making the header sticky and having background,
+       * we need to make sure the logo actually covers the header, but not vice versa
+       * Override default z-index on "@media only screen and (max-width: 960px)" */
+      .side-nav-menu-button {
+        z-index: 3 !important;
+      }
+
+      /* Make the header sticky so that the scrollbar sketch the entire window,
+       * not just the height of the .content-wrapper element */
       .desktop-ogb-buffer {
         background: var(--bard-color-synthetic--chat-window-surface);
         padding-block: calc(6px + 12px) calc(6px + 10px) !important;
@@ -132,7 +156,7 @@ export async function archiveConversation(id: string, browser: Browser) {
         z-index: 2;
       }
     `)
-    document.adoptedStyleSheets = [...document.adoptedStyleSheets, pageStyles]
+    document.adoptedStyleSheets.push(scrollbarStyles)
 
     // ----- Replace bot instruction container with a <details> element -----
     // Wait for the full instruction text to load
