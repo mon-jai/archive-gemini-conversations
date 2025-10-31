@@ -117,36 +117,29 @@ export async function archiveConversation(id: string, browser: Browser) {
     while (scriptTags.length > 0) scriptTags[0]!.remove()
 
     // ----- Remove custom scrollbar -----
-    function checkAndDeleteScrollbarRuleRecursively(indexStr: string, source: CSSStyleSheet | CSSMediaRule) {
-      const index = parseInt(indexStr)
-      const rule = source.cssRules[index]!
-      if (rule instanceof CSSMediaRule) {
-        for (const mediaIndexStr in rule.cssRules) checkAndDeleteScrollbarRuleRecursively(mediaIndexStr, rule)
-      } else if (rule instanceof CSSStyleRule && rule.selectorText.includes("::-webkit-scrollbar")) {
-        source.deleteRule(index)
+    function removeScrollbarRules(source: CSSStyleSheet | CSSMediaRule) {
+      // Delete from the end of list to avoid index shift issues
+      const reversedEntries = Array.from(source.cssRules).entries().toArray().reverse()
+      for (const [index, rule] of reversedEntries) {
+        if (rule instanceof CSSMediaRule) {
+          removeScrollbarRules(rule)
+        } else if (rule instanceof CSSStyleRule && rule.selectorText.includes("::-webkit-scrollbar")) {
+          source.deleteRule(index)
+        }
       }
     }
-    for (const styleSheet of document.styleSheets) {
-      for (const indexStr in styleSheet.cssRules) {
-        checkAndDeleteScrollbarRuleRecursively(indexStr, styleSheet)
-      }
-    }
+    for (const styleSheet of document.styleSheets) removeScrollbarRules(styleSheet)
+    // Make the scrollbar span the entire window, not just the height of the .content-wrapper element
     const scrollbarStyles = new CSSStyleSheet()
     scrollbarStyles.replaceSync(css`
-      :has(message-content) {
-        overflow: unset !important;
-        position: unset !important;
-      }
-
-      /* As a side effect of making the header sticky and having background,
-       * we need to make sure the logo actually covers the header, but not vice versa
-       * Override default z-index on "@media only screen and (max-width: 960px)" */
+      /* As a side effect of the header becoming sticky and having a background,
+       * we must ensure the logo covers the header, not the reverse.
+       * This overrides the default z-index at the "@media only screen and (max-width: 960px)" breakpoint. */
       .side-nav-menu-button {
         z-index: 3 !important;
       }
 
-      /* Make the header sticky so that the scrollbar sketch the entire window,
-       * not just the height of the .content-wrapper element */
+      /* Make the header sticky again, following the changes to .content-wrapper and .content-container */
       .desktop-ogb-buffer {
         background: var(--bard-color-synthetic--chat-window-surface);
         padding-block: calc(6px + 12px) calc(6px + 10px) !important;
@@ -154,6 +147,11 @@ export async function archiveConversation(id: string, browser: Browser) {
         position: sticky;
         top: 0;
         z-index: 2;
+      }
+
+      .content-wrapper,
+      .content-container {
+        overflow: unset !important;
       }
     `)
     document.adoptedStyleSheets.push(scrollbarStyles)
