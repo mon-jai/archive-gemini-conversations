@@ -132,6 +132,23 @@ export async function archiveConversation(id: string, browser: Browser) {
     // Make the scrollbar span the entire window, not just the height of the .content-wrapper element
     const scrollbarStyles = new CSSStyleSheet()
     scrollbarStyles.replaceSync(css`
+      html {
+        overflow: unset;
+      }
+
+      body {
+        height: unset !important;
+      }
+
+      /* ".desktop-ogb-buffer" couldn't be sticky,
+       * if it had an ancestor element with overflow property set to something other than visible,
+       * leaving no space space left for it to stick around
+       * https://stackoverflow.com/a/66416972/ */
+      chat-app,
+      bard-sidenav-content {
+        overflow: unset !important;
+      }
+
       /* As a side effect of the header becoming sticky and having a background,
        * we must ensure the logo covers the header, not the reverse.
        * This overrides the default z-index at the "@media only screen and (max-width: 960px)" breakpoint. */
@@ -139,7 +156,8 @@ export async function archiveConversation(id: string, browser: Browser) {
         z-index: 3 !important;
       }
 
-      /* Make the header sticky again, following the changes to .content-wrapper and .content-container */
+      /* Make the header truly sticky,
+       * instead of having a header and a scrollable ".content-container" */
       .desktop-ogb-buffer {
         background: var(--bard-color-synthetic--chat-window-surface);
         padding-block: calc(6px + 12px) calc(6px + 10px) !important;
@@ -149,9 +167,8 @@ export async function archiveConversation(id: string, browser: Browser) {
         z-index: 2;
       }
 
-      .content-wrapper,
       .content-container {
-        overflow: unset !important;
+        position: unset !important;
       }
     `)
     document.adoptedStyleSheets.push(scrollbarStyles)
