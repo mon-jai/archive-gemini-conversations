@@ -149,9 +149,23 @@ export async function archiveConversation(id: string, browser: Browser) {
         z-index: 2;
       }
 
+      html {
+        overflow: unset;
+      }
+
+      body,
+      chat-app,
+      .main-content {
+        height: fit-content !important;
+      }
+
       .content-wrapper,
       .content-container {
         overflow: unset !important;
+      }
+
+      .content-container {
+        position: unset !important;
       }
     `)
     document.adoptedStyleSheets.push(scrollbarStyles)
