@@ -299,7 +299,12 @@ export async function archiveConversation(id: string, browser: Browser) {
     `)
 
   // Remove illegal filename characters
-  const fileName = `${id} - ${sanitize(title).substring(0, 100)}.html`
+  const sanitizedTitle = sanitize(title)
+  // Fix ENAMETOOLONG error on Linux, where the maximum filename length is measured in bytes, not characters
+  // https://stackoverflow.com/a/57769822/
+  const truncatedTitle = new TextDecoder().decode(new TextEncoder().encode(sanitizedTitle).slice(0, 100))
+
+  const fileName = `${id} - ${truncatedTitle}.html`
   const filePath = join(ARCHIVE_DIR, fileName)
   await writeFile(filePath, fileContent)
 }
