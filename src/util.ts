@@ -294,6 +294,10 @@ export async function archiveConversation(id: string, browser: Browser) {
           .markdown-main-panel {
             margin-right: 0 !important;
           }
+
+          .share-viewer_legal-links {
+            display: none !important;
+          }
         }
       </style>
     `)
