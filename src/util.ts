@@ -173,6 +173,18 @@ export async function archiveConversation(id: string, browser: Browser) {
     `)
     document.adoptedStyleSheets.push(scrollbarStyles)
 
+    // --- Remove table footers containing "Export to Sheets" and "Copy table" buttons ---
+    const tableFooterTags = document.getElementsByClassName("table-footer")
+    while (tableFooterTags.length > 0) tableFooterTags[0]!.remove()
+    // Relocate bottom border-radius to table styles following the removal of table footers
+    const tableStyles = new CSSStyleSheet()
+    tableStyles.replaceSync(css`
+      .table-block.has-export-button table {
+        border-radius: var(--gem-sys-shape--corner-large) !important;
+      }
+    `)
+    document.adoptedStyleSheets.push(tableStyles)
+
     // ----- Replace bot instruction container with a <details> element -----
     // Wait for the full instruction text to load
     await new Promise(resolve => requestAnimationFrame(resolve))
@@ -196,11 +208,10 @@ export async function archiveConversation(id: string, browser: Browser) {
     while (matIcons.length > 0) {
       const matIcon = matIcons[0]!
       const iconComputedStyle = getComputedStyle(matIcon)
-      const iconAttribute = matIcon.getAttribute("fonticon")
 
       const iconColor = iconComputedStyle.color
       const iconSize = parseInt(iconComputedStyle.fontSize)
-      const iconName = iconAttribute == "drive_spreadsheet" ? "table" : iconAttribute
+      const iconName = matIcon.getAttribute("fonticon")
       // Find the "optical size" variant closest to the size of the original icon
       const replacementIconSize = [20, 24, 40, 48].reduce((accumulator, variant) =>
         Math.abs(variant - iconSize) < Math.abs(accumulator - iconSize) ? variant : accumulator
