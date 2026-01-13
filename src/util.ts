@@ -70,6 +70,10 @@ export async function archiveConversation(id: string, browser: Browser) {
     // Expand instructions text for the Gemini Gem used in the conversation
     document.querySelector<HTMLButtonElement>('[data-test-id="bot-instruction-see-more-button"]')?.click()
 
+    // --- Replace generic "Gemini - direct access to Google AI" document title with the conversation name ---
+    const title = document.querySelector("h1 > strong")?.textContent
+    if (title !== undefined) document.title = `${title} - Google Gemini`
+
     // --- Prevent horizontal overflow on mobile devices ---
     const overflowStyles = new CSSStyleSheet()
     overflowStyles.replaceSync(css`
