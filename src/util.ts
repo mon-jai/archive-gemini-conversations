@@ -61,14 +61,7 @@ export async function archiveConversation(id: string, browser: Browser) {
     const dummyTagFunction: DummyTagFunction = (template, ...substitutions) =>
       // @ts-expect-error
       String.raw({ raw: template }, ...substitutions)
-    const html = dummyTagFunction
     const css = dummyTagFunction
-
-    // ----- Toggle buttons to expand truncated contents -----
-    // Expand "Research Websites" section in Deep Research metadata
-    document.querySelector<HTMLButtonElement>('[data-test-id="toggle-description-expansion-button"]')?.click()
-    // Expand instructions text for the Gemini Gem used in the conversation
-    document.querySelector<HTMLButtonElement>('[data-test-id="bot-instruction-see-more-button"]')?.click()
 
     // --- Replace generic "Gemini - direct access to Google AI" document title with the conversation name ---
     const title = document.querySelector("h1 > strong")?.textContent
@@ -88,6 +81,10 @@ export async function archiveConversation(id: string, browser: Browser) {
       }
     `)
     document.adoptedStyleSheets.push(overflowStyles)
+
+    // ----- Toggle buttons to expand truncated contents -----
+    // Expand "Research Websites" section in Deep Research metadata
+    document.querySelector<HTMLButtonElement>('[data-test-id="toggle-description-expansion-button"]')?.click()
 
     // ----- Remove unnecessary elements from the page -----
     // About Gemini section
@@ -188,23 +185,6 @@ export async function archiveConversation(id: string, browser: Browser) {
       }
     `)
     document.adoptedStyleSheets.push(tableStyles)
-
-    // ----- Replace bot instruction container with a <details> element -----
-    // Wait for the full instruction text to load
-    await new Promise(resolve => requestAnimationFrame(resolve))
-    const botInstructionContainer = document.getElementsByClassName("bot-instruction-container")[0]
-    if (botInstructionContainer) {
-      const labelHTML = botInstructionContainer.querySelector<HTMLSpanElement>(".bot-instruction-label")!.outerHTML
-      const contentHTML = botInstructionContainer.querySelector<HTMLPreElement>(".bot-instruction-content")!.outerHTML
-      const matDividerHTML = botInstructionContainer.querySelector("mat-divider")!.outerHTML
-      botInstructionContainer.innerHTML = html`
-        <details>
-          <summary>${labelHTML}</summary>
-          ${contentHTML}
-        </details>
-        ${matDividerHTML}
-      `
-    }
 
     // ----- Replace font-based <mat-icon /> with their SVG equivalents to reduce bundle size -----
     // For example, expand button for chain of thought, Deep Research steps, etc.
