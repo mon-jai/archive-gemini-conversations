@@ -83,8 +83,15 @@ export async function archiveConversation(id: string, browser: Browser) {
     document.adoptedStyleSheets.push(overflowStyles)
 
     // ----- Toggle buttons to expand truncated contents -----
+    // Expand user prompts
+    const expandPromptButtons = document.querySelectorAll<HTMLButtonElement>(
+      "button[data-test-id='luminous-expand-button']"
+    )
+    for (const expandPromptButton of expandPromptButtons) expandPromptButton.click()
     // Expand "Research Websites" section in Deep Research metadata
     document.querySelector<HTMLButtonElement>('[data-test-id="toggle-description-expansion-button"]')?.click()
+    // Wait for the content to expand
+    await new Promise(resolve => requestAnimationFrame(resolve))
 
     // ----- Remove unnecessary elements from the page -----
     // About Gemini section
@@ -95,14 +102,23 @@ export async function archiveConversation(id: string, browser: Browser) {
     // Copy and flag buttons
     const linkActionButtons = document.getElementsByClassName("link-action-buttons")[0]?.children
     if (linkActionButtons) while (linkActionButtons.length > 0) linkActionButtons[0]!.remove()
+    // Collapse prompt buttons
+    const collapsePromptButtons = document.getElementsByClassName("luminous-toggle-container")
+    while (collapsePromptButtons.length > 0) collapsePromptButtons[0]!.remove()
     // Copy prompt buttons
-    const copyPromptButtons = document.querySelectorAll('button[aria-label="Copy prompt"]')
+    const copyPromptButtons = document.querySelectorAll("gem-icon-button[data-test-id='prompt-copy-button']")
     for (const copyPromptButton of copyPromptButtons) copyPromptButton.remove()
     // Sources buttons
     // They won't work anyways since we are removing all script tags
     const sourcesButtons = document.getElementsByTagName("sources-carousel-inline")
     while (sourcesButtons.length > 0) sourcesButtons[0]!.remove()
-    // tts-control causes blank spaces at the end of some pages, while isn't displaying anything
+    // Table footers
+    const tableFooterTags = document.getElementsByClassName("table-footer")
+    while (tableFooterTags.length > 0) tableFooterTags[0]!.remove()
+    // The new "interactive visuals" (they won't load without an active Google session, worth revisiting in the future)
+    const interactiveVisuals = document.querySelectorAll("p:has(> .attachment-container > response-element)")
+    for (let index = interactiveVisuals.length - 1; index >= 0; index--) interactiveVisuals[index]!.remove()
+    // tts-controls
     const ttsControls = document.getElementsByTagName("tts-control")
     while (ttsControls.length > 0) ttsControls[0]!.remove()
     // Disclaimer section
@@ -173,18 +189,6 @@ export async function archiveConversation(id: string, browser: Browser) {
       }
     `)
     document.adoptedStyleSheets.push(scrollbarStyles)
-
-    // --- Remove table footers containing "Export to Sheets" and "Copy table" buttons ---
-    const tableFooterTags = document.getElementsByClassName("table-footer")
-    while (tableFooterTags.length > 0) tableFooterTags[0]!.remove()
-    // Relocate bottom border-radius to table styles following the removal of table footers
-    const tableStyles = new CSSStyleSheet()
-    tableStyles.replaceSync(css`
-      .table-block.has-export-button table {
-        border-radius: var(--gem-sys-shape--corner-large) !important;
-      }
-    `)
-    document.adoptedStyleSheets.push(tableStyles)
 
     // ----- Replace font-based <mat-icon /> with their SVG equivalents to reduce bundle size -----
     // For example, expand button for chain of thought, Deep Research steps, etc.
@@ -263,14 +267,27 @@ export async function archiveConversation(id: string, browser: Browser) {
     .concat(html`
       <style>
         @media print {
+          body {
+            background-color: white !important;
+          }
+
+          .top-container,
+          .chat-history {
+            max-width: 100% !important;
+          }
+
           .side-nav-menu-button {
             position: unset !important;
-            justify-content: start !important;
+            margin-top: 0 !important;
             margin-left: 0 !important;
           }
 
-          .bard-logo-container {
-            padding-left: 0 !important;
+          chat-app.enable-print-overrides .hide-on-print.side-nav-menu-button {
+            display: flex !important;
+          }
+
+          .gemini-spark-header {
+            margin-left: 0 !important;
           }
 
           /* Remove buffer area for the (now static) header */
@@ -280,10 +297,6 @@ export async function archiveConversation(id: string, browser: Browser) {
 
           .chat-history {
             padding-inline: 0 !important;
-          }
-
-          .avatar-gutter {
-            display: none !important;
           }
 
           .markdown-main-panel {
