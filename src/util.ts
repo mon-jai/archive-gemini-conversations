@@ -21,7 +21,7 @@ export async function getGeminiIdsFromMarkdowns(): Promise<Set<string>> {
 
   for await (const markdownFile of markdownFiles) {
     const readme = await readFile(markdownFile, "utf8")
-    const matches = readme.matchAll(/https:\/\/(?:gemini\.google\.com|g\.co\/gemini)\/share\/(?<id>[^\/\s]+)/g)
+    const matches = readme.matchAll(/https:\/\/(?:gemini\.google\.com|g\.co\/gemini)\/share\/(?<id>[^/\s]+)/g)
     for (const match of matches) ids.add(match.groups!["id"]!)
   }
 
@@ -63,25 +63,6 @@ export async function archiveConversation(id: string, browser: Browser) {
       String.raw({ raw: template }, ...substitutions)
     const css = dummyTagFunction
 
-    // --- Replace generic "Gemini - direct access to Google AI" document title with the conversation name ---
-    const title = document.querySelector("h1 > strong")?.textContent
-    if (title !== undefined) document.title = `${title} - Google Gemini`
-
-    // --- Prevent horizontal overflow on mobile devices ---
-    const overflowStyles = new CSSStyleSheet()
-    overflowStyles.replaceSync(css`
-      .content-wrapper {
-        max-width: 100vw;
-      }
-
-      /* Wrapper for tables */
-      .horizontal-scroll-wrapper {
-        margin-inline: 0 !important;
-        padding-inline: 0 !important;
-      }
-    `)
-    document.adoptedStyleSheets.push(overflowStyles)
-
     // ----- Toggle buttons to expand truncated contents -----
     // Expand user prompts
     const expandPromptButtons = document.querySelectorAll<HTMLButtonElement>(
@@ -89,7 +70,7 @@ export async function archiveConversation(id: string, browser: Browser) {
     )
     for (const expandPromptButton of expandPromptButtons) expandPromptButton.click()
     // Expand "Research Websites" section in Deep Research metadata
-    document.querySelector<HTMLButtonElement>('[data-test-id="toggle-description-expansion-button"]')?.click()
+    document.querySelector<HTMLButtonElement>("[data-test-id='toggle-description-expansion-button']")?.click()
     // Wait for the content to expand
     await new Promise(resolve => requestAnimationFrame(resolve))
 
@@ -100,8 +81,8 @@ export async function archiveConversation(id: string, browser: Browser) {
     document.getElementsByClassName("boqOnegoogleliteOgbOneGoogleBar")[0]?.remove()
     document.getElementsByClassName("share-landing-page_footer")[0]?.remove()
     // Copy and flag buttons
-    const linkActionButtons = document.getElementsByClassName("link-action-buttons")[0]?.children
-    if (linkActionButtons) while (linkActionButtons.length > 0) linkActionButtons[0]!.remove()
+    const linkActionButtons = document.getElementsByClassName("link-action-buttons")[0]?.children ?? []
+    while (linkActionButtons.length > 0) linkActionButtons[0]!.remove()
     // Collapse prompt buttons
     const collapsePromptButtons = document.getElementsByClassName("luminous-toggle-container")
     while (collapsePromptButtons.length > 0) collapsePromptButtons[0]!.remove()
@@ -146,7 +127,60 @@ export async function archiveConversation(id: string, browser: Browser) {
       }
     }
     for (const styleSheet of document.styleSheets) removeScrollbarRules(styleSheet)
-    // Make the scrollbar span the entire window, not just the height of the .content-wrapper element
+
+    // ----- Replace generic "Gemini - direct access to Google AI" document title with the conversation name -----
+    const title = document.querySelector("h1 > strong")?.textContent
+    if (title !== undefined) document.title = `${title} - Google Gemini`
+
+    // ----- Replace font-based <mat-icon /> with their SVG equivalents to reduce bundle size -----
+    // For example, expand button for chain of thought, Deep Research steps, etc.
+    const matIcons = document.getElementsByTagName("mat-icon")
+    while (matIcons.length > 0) {
+      const matIcon = matIcons[0]!
+      const iconComputedStyle = getComputedStyle(matIcon)
+
+      const iconColor = iconComputedStyle.color
+      const iconSize = parseInt(iconComputedStyle.fontSize)
+      const iconName = matIcon.getAttribute("fonticon")
+      // Find the "optical size" variant closest to the size of the original icon
+      const replacementIconSize = [20, 24, 40, 48].reduce((accumulator, variant) =>
+        Math.abs(variant - iconSize) < Math.abs(accumulator - iconSize) ? variant : accumulator
+      )
+
+      // https://stackoverflow.com/a/43916743/
+      const newIconEl = document.createElement("div")
+      newIconEl.style.backgroundColor = iconColor
+      newIconEl.style.mask = `url(https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/${iconName}/default/${replacementIconSize}px.svg)`
+      newIconEl.style.width = `${replacementIconSize}px`
+      newIconEl.style.height = `${replacementIconSize}px`
+      // Info icon for the "Uploaded file not shown" message
+      if (iconSize != replacementIconSize) {
+        newIconEl.style.transform = `scale(${iconSize / replacementIconSize})`
+        newIconEl.style.transformOrigin = "top left"
+      }
+
+      matIcon.insertAdjacentElement("afterend", newIconEl)
+      matIcon.remove()
+    }
+
+    // --- Prevent horizontal overflow on mobile devices ---
+    const overflowStyles = new CSSStyleSheet()
+    overflowStyles.replaceSync(css`
+      .content-wrapper {
+        max-width: 100vw;
+      }
+
+      /* Wrapper for tables */
+      .horizontal-scroll-wrapper {
+        margin-inline: 0 !important;
+        padding-inline: 0 !important;
+      }
+    `)
+    document.adoptedStyleSheets.push(overflowStyles)
+
+    // --- Use a sticky header ---
+    // The default header is not sticky, and the ".content-container" element is scrollable,
+    // which makes it impossible to print the page with paragraphs that exceed the page height
     const scrollbarStyles = new CSSStyleSheet()
     scrollbarStyles.replaceSync(css`
       html {
@@ -189,37 +223,6 @@ export async function archiveConversation(id: string, browser: Browser) {
       }
     `)
     document.adoptedStyleSheets.push(scrollbarStyles)
-
-    // ----- Replace font-based <mat-icon /> with their SVG equivalents to reduce bundle size -----
-    // For example, expand button for chain of thought, Deep Research steps, etc.
-    const matIcons = document.getElementsByTagName("mat-icon")
-    while (matIcons.length > 0) {
-      const matIcon = matIcons[0]!
-      const iconComputedStyle = getComputedStyle(matIcon)
-
-      const iconColor = iconComputedStyle.color
-      const iconSize = parseInt(iconComputedStyle.fontSize)
-      const iconName = matIcon.getAttribute("fonticon")
-      // Find the "optical size" variant closest to the size of the original icon
-      const replacementIconSize = [20, 24, 40, 48].reduce((accumulator, variant) =>
-        Math.abs(variant - iconSize) < Math.abs(accumulator - iconSize) ? variant : accumulator
-      )
-
-      // https://stackoverflow.com/a/43916743/
-      const newIconEl = document.createElement("div")
-      newIconEl.style.backgroundColor = iconColor
-      newIconEl.style.mask = `url(https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/${iconName}/default/${replacementIconSize}px.svg)`
-      newIconEl.style.width = `${replacementIconSize}px`
-      newIconEl.style.height = `${replacementIconSize}px`
-      // Info icon for the "Uploaded file not shown" message
-      if (iconSize != replacementIconSize) {
-        newIconEl.style.transform = `scale(${iconSize / replacementIconSize})`
-        newIconEl.style.transformOrigin = "top left"
-      }
-
-      matIcon.insertAdjacentElement("afterend", newIconEl)
-      matIcon.remove()
-    }
   })
 
   const getPageDataOptions = {
@@ -238,7 +241,7 @@ export async function archiveConversation(id: string, browser: Browser) {
   const variablesUsedInDocument = new Set(
     // Variable values could contain other values, so /var\(([^\)]+)/g won't work
     // e.g. --a: var(--b, var(--c));
-    Array.from(documentHTML.matchAll(/var\s*\(\s*(?<variableName>--[A-Za-z0-9\-]+)/g)).map(
+    Array.from(documentHTML.matchAll(/var\s*\(\s*(?<variableName>--[A-Za-z0-9-]+)/g)).map(
       regExpExecArray => regExpExecArray.groups!["variableName"]!
     )
   )
@@ -249,7 +252,7 @@ export async function archiveConversation(id: string, browser: Browser) {
     // Remove unused CSS variable decelerations
     // <div style="--a: 0px"> ...
     .replaceAll(
-      /(?<variableName>--[A-Za-z0-9\-]+)\s*:\s*(?<value>(?:(?!["']\s*>)[^;\n\}])+);?/gm,
+      /(?<variableName>--[A-Za-z0-9-]+)\s*:\s*(?<value>(?:(?!["']\s*>)[^;\n}])+);?/gm,
       (_match, variableName: string, value: string) => {
         if (variablesUsedInDocument.has(variableName)) return `${variableName}:${value};`
         return ""
