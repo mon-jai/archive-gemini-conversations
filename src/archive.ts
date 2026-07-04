@@ -4,7 +4,7 @@ import { join } from "path"
 import type { Browser } from "playwright"
 import sanitize from "sanitize-filename"
 
-import { ARCHIVE_DIR, HOOK_SCRIPT, SCRIPT, ZIP_SCRIPT } from "./constants.js"
+import { ARCHIVE_DIR, HOOK_SCRIPT, SCRIPT, ZIP_SCRIPT } from "./constants.ts"
 
 declare namespace singlefile {
   function getPageData(options: Record<string, any>): Promise<{ content: string }>

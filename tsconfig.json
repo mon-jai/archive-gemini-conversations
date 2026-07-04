@@ -40,5 +40,9 @@
     "noUncheckedSideEffectImports": true,
     "moduleDetection": "force",
     "skipLibCheck": true,
+
+    // Allows TypeScript files to import each other with .ts extension
+    "allowImportingTsExtensions": true,
+    "noEmit": true
   }
 }

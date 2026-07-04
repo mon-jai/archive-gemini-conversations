@@ -4,9 +4,9 @@ import { join, resolve } from "path"
 import { queue } from "async"
 import { chromium } from "playwright"
 
-import { archiveConversation } from "./archive.js"
-import { ARCHIVE_DIR, WORKSPACE_ROOT } from "./constants.js"
-import { buildCommitMessage, getArchivedConversations, getGeminiIdsFromMarkdowns } from "./utils.js"
+import { archiveConversation } from "./archive.ts"
+import { ARCHIVE_DIR, WORKSPACE_ROOT } from "./constants.ts"
+import { buildCommitMessage, getArchivedConversations, getGeminiIdsFromMarkdowns } from "./utils.ts"
 
 await mkdir(ARCHIVE_DIR, { recursive: true })
 

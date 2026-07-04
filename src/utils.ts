@@ -1,6 +1,6 @@
 import { glob, readdir, readFile } from "fs/promises"
 
-import { WORKSPACE_ROOT } from "./constants.js"
+import { WORKSPACE_ROOT } from "./constants.ts"
 
 export async function getGeminiIdsFromMarkdowns(): Promise<Set<string>> {
   const ids = new Set<string>()
