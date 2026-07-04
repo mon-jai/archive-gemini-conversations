@@ -175,6 +175,11 @@ export async function archiveConversation(id: string, browser: Browser) {
         overflow: unset !important;
       }
 
+      /* Override padding-top for mobile devices */
+      chat-app {
+        padding-top: 0 !important;
+      }
+
       /* As a side effect of the header becoming sticky and having a background,
        * we must ensure the logo covers the header, not the reverse.
        * This overrides the default z-index at the "@media only screen and (max-width: 960px)" breakpoint. */
@@ -185,7 +190,7 @@ export async function archiveConversation(id: string, browser: Browser) {
       /* Make the header truly sticky,
        * instead of having a header and a scrollable ".content-container" */
       .desktop-ogb-buffer {
-        background: var(--bard-color-synthetic--chat-window-surface);
+        background: var(--lumi-sys-color--surface);
         padding-block: calc(6px + 12px) calc(6px + 10px) !important;
         margin-block: 0 !important;
         position: sticky;
