@@ -7,14 +7,14 @@
   },
   "dependencies": {
     "async": "^3.2.6",
-    "playwright": "^1.54.2",
-    "sanitize-filename": "^1.6.3",
-    "single-file-cli": "^2.0.75"
+    "playwright": "^1.61.1",
+    "sanitize-filename": "^1.6.4",
+    "single-file-cli": "^2.0.83"
   },
   "devDependencies": {
     "@types/async": "^3.2.25",
-    "@types/node": "^24.2.1",
-    "typescript": "^5.9.2"
+    "@types/node": "^26.1.1",
+    "typescript": "^7.0.2"
   },
   "type": "module",
   "private": true
