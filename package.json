@@ -9,7 +9,7 @@
     "async": "^3.2.6",
     "playwright": "^1.61.1",
     "sanitize-filename": "^1.6.4",
-    "single-file-cli": "^2.0.83"
+    "single-file": "github:gildas-lormeau/SingleFile#v1.25.0"
   },
   "devDependencies": {
     "@types/async": "^3.2.25",
