@@ -29,7 +29,7 @@ export async function archiveConversation(id: string, browser: Browser) {
 
   // In some shared conversations, title does not exists
   // page.evaluate: TypeError: Cannot read properties of null (reading 'textContent')
-  const title = await page.evaluate(() => document.querySelector("h1 > strong")?.textContent ?? "")
+  const title = await page.evaluate(() => document.querySelector(".share-title-section > .title-link > h1")?.textContent ?? "")
   const includesKatex = await page.evaluate(() => document.getElementsByClassName("katex").length > 0)
 
   await page.evaluate(async () => {
