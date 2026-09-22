@@ -18,10 +18,12 @@ const newIds = [...listedIds].filter(id => !archivedIds.has(id))
 const staleIds = [...archivedIds].filter(id => !listedIds.has(id))
 
 // Delete stale conversations
-for (const id of staleIds) {
-  const filePath = join(ARCHIVE_DIR, archivedMap.get(id)!)
-  await unlink(filePath)
-}
+await Promise.all(
+  staleIds.map(staleId => {
+    const filePath = join(ARCHIVE_DIR, archivedMap.get(staleId)!)
+    return unlink(filePath)
+  })
+)
 
 // Archive new conversations, at most 10 concurrently
 await using browser = await chromium.launch({ args: ["--disable-web-security"] })
